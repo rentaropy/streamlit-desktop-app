@@ -142,6 +142,7 @@ def build_executable(
     icon: Optional[str] = None,
     pyinstaller_options: Optional[List[str]] = None,
     streamlit_options: Optional[list[str]] = None,
+    allow_downloads: bool = False,  # <-- 変更点: 引数を追加
 ):
     """Build a standalone executable from a Streamlit application.
 
@@ -163,6 +164,8 @@ def build_executable(
             options. These will be passed directly to PyInstaller.
         streamlit_options: Optional list of Streamlit configuration options.
             These will be applied when the application starts.
+        allow_downloads: Whether to allow file downloads in the webview. # <-- 変更点: Docstring を更新
+            Defaults to False.
 
     Raises:
         SystemExit: If the specified script_path does not exist.
@@ -217,7 +220,12 @@ if __name__ == "__main__":
     if '_PYI_SPLASH_IPC' in os.environ:
         import pyi_splash
         pyi_splash.close()
-    start_desktop_app(get_script_path(), title="{name}", options={parse_streamlit_options(streamlit_options)})
+    start_desktop_app(
+        get_script_path(), 
+        title="{name}", 
+        options={parse_streamlit_options(streamlit_options)},
+        allow_downloads={allow_downloads}  # <-- 変更点: allow_downloads を渡す
+    )
 """
         wrapper.write(wrapper_content.encode())
 

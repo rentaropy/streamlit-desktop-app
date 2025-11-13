@@ -97,6 +97,7 @@ def start_desktop_app(
     width: int = 1024,
     height: int = 768,
     options: Optional[Dict[str, str]] = None,
+    allow_downloads: bool = False,  # <-- 変更点: 引数を追加
 ) -> None:
     """Start the Streamlit app as a desktop application using pywebview.
 
@@ -113,7 +114,9 @@ def start_desktop_app(
         options: Optional dictionary of additional Streamlit configuration options.
             Note that certain options (server.address, server.port, server.headless,
             global.developmentMode) will be overridden by the application.
-
+        allow_downloads: Whether to allow file downloads in the webview.  # <-- 変更点: Docstring を更新
+            Defaults to False.
+            
     Raises:
         FileNotFoundError: If the specified script_path does not exist.
         TimeoutError: If the Streamlit server fails to start within the timeout period.
@@ -140,6 +143,9 @@ def start_desktop_app(
         ...         'theme.backgroundColor': '#FFFFFF'
         ...     }
         ... )
+        >>>
+        >>> # Allow downloads
+        >>> start_desktop_app('app.py', allow_downloads=True) # <-- 変更点: Docstring に例を追加
     """
     if options is None:
         options = {}
@@ -173,6 +179,10 @@ def start_desktop_app(
     try:
         # Wait for the Streamlit server to start
         wait_for_server(port)
+
+        # <-- 変更点: ダウンロード設定を追加
+        if allow_downloads:
+            webview.settings['ALLOW_DOWNLOADS'] = True
 
         # Start pywebview with the Streamlit server URL
         webview.create_window(
