@@ -10,6 +10,25 @@ import webview
 from streamlit.web import cli as stcli
 
 
+# <-- 変更点: 特定のポートが空いているかチェックする関数を追加
+def is_port_free(port: int) -> bool:
+    """Check if a specific port is free.
+
+    Args:
+        port: The port number to check.
+
+    Returns:
+        True if the port is free, False otherwise.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(("", port))
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            return True
+    except (socket.error, OSError):
+        return False
+
+
 def find_free_port() -> int:
     """Find an available port on the system.
 
@@ -97,7 +116,7 @@ def start_desktop_app(
     width: int = 1024,
     height: int = 768,
     options: Optional[Dict[str, str]] = None,
-    allow_downloads: bool = False,  # <-- 変更点: 引数を追加
+    allow_downloads: bool = False,
 ) -> None:
     """Start the Streamlit app as a desktop application using pywebview.
 
@@ -112,9 +131,10 @@ def start_desktop_app(
         width: Width of the desktop window in pixels. Defaults to 1024.
         height: Height of the desktop window in pixels. Defaults to 768.
         options: Optional dictionary of additional Streamlit configuration options.
-            Note that certain options (server.address, server.port, server.headless,
+            Note that certain options (server.address, server.headless,
             global.developmentMode) will be overridden by the application.
-        allow_downloads: Whether to allow file downloads in the webview.  # <-- 変更点: Docstring を更新
+            'server.port' will be used if specified and available.
+        allow_downloads: Whether to allow file downloads in the webview.
             Defaults to False.
             
     Raises:
@@ -145,15 +165,15 @@ def start_desktop_app(
         ... )
         >>>
         >>> # Allow downloads
-        >>> start_desktop_app('app.py', allow_downloads=True) # <-- 変更点: Docstring に例を追加
+        >>> start_desktop_app('app.py', allow_downloads=True)
     """
     if options is None:
         options = {}
 
-    # Check for overridden options and print warnings
+    # <-- 変更点: 'server.port' を上書きリストから削除
     overridden_options = [
         "server.address",
-        "server.port",
+        # "server.port", # <-- ユーザー指定を許可するため削除
         "server.headless",
         "global.developmentMode",
     ]
@@ -163,7 +183,34 @@ def start_desktop_app(
                 f"Option '{opt}' is overridden by the application and will be ignored."
             )
 
-    port = find_free_port()
+    # <-- 変更点: ポート決定ロジックの開始
+    port = 0
+    user_specified_port_str = options.get("server.port")
+
+    if user_specified_port_str:
+        try:
+            user_port = int(user_specified_port_str)
+            if is_port_free(user_port):
+                port = user_port  # ユーザー指定のポートが空いているので使用する
+            else:
+                # ユーザーがポートを指定したが、既に使用中だった
+                logging.warning(
+                    f"Warning: Port {user_port} is already in use. "
+                    "A random free port will be assigned."
+                )
+        except ValueError:
+            # ポート番号が 'abc' など、不正な値だった
+            logging.warning(
+                f"Warning: Invalid port '{user_specified_port_str}'. "
+                "A random free port will be assigned."
+            )
+
+    # ユーザー指定のポートを使わない場合 (未指定 or 使用中 or 不正値)
+    if port == 0:
+        port = find_free_port()
+    # <-- 変更点: ポート決定ロジックの終了
+
+    # 決定したポートと、他の必須オプションを設定
     options["server.address"] = "localhost"
     options["server.port"] = str(port)
     options["server.headless"] = "true"
@@ -180,7 +227,6 @@ def start_desktop_app(
         # Wait for the Streamlit server to start
         wait_for_server(port)
 
-        # <-- 変更点: ダウンロード設定を追加
         if allow_downloads:
             webview.settings['ALLOW_DOWNLOADS'] = True
 
