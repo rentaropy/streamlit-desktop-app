@@ -10,6 +10,7 @@ Usage:
 Options:
     --name              Name of the output executable (required)
     --icon             Path to the icon file for the executable
+    --allow-download   Allow file downloads in the application
     --pyinstaller-options  Additional PyInstaller options
     --streamlit-options    Additional Streamlit configuration options
 
@@ -19,6 +20,9 @@ Examples:
 
     # With custom icon
     streamlit-desktop-app build app.py --name MyApp --icon icon.ico
+
+    # With downloads allowed
+    streamlit-desktop-app build app.py --name MyApp --allow-download
 
     # With PyInstaller options
     streamlit-desktop-app build app.py --name MyApp --pyinstaller-options --onefile --clean
@@ -43,6 +47,7 @@ def build_command(args: argparse.Namespace):
             - script: Path to the Streamlit script
             - name: Name of the output executable
             - icon: Optional path to the icon file
+            - allow_download: Whether to allow file downloads  # <-- 変更点: Docstring を更新
             - pyinstaller_options: Additional PyInstaller command-line options
             - streamlit_options: Additional Streamlit configuration options
 
@@ -50,6 +55,7 @@ def build_command(args: argparse.Namespace):
         When called via CLI:
         ```bash
         streamlit-desktop-app build app.py --name MyApp --icon app.ico \\
+            --allow-download \\
             --pyinstaller-options --onefile --clean \\
             --streamlit-options --theme.primaryColor=#F63366
         ```
@@ -80,6 +86,7 @@ def build_command(args: argparse.Namespace):
         icon=args.icon,
         pyinstaller_options=pyinstaller_options,
         streamlit_options=streamlit_options,
+        allow_downloads=args.allow_download,  # <-- 変更点: 引数を渡す
     )
 
 
@@ -97,6 +104,7 @@ def add_build_parser(subparsers: argparse._SubParsersAction):
         - script: (Required) Path to the Streamlit script to package
         - --name: (Required) Name of the output executable
         - --icon: (Optional) Path to the icon file for the executable
+        - --allow-download: (Optional) Allow file downloads # <-- 変更点: Docstring を更新
         - --pyinstaller-options: (Optional) Additional PyInstaller arguments
         - --streamlit-options: (Optional) Additional Streamlit CLI options
     """
@@ -106,6 +114,14 @@ def add_build_parser(subparsers: argparse._SubParsersAction):
     build_parser.add_argument("script", help="Path to the Streamlit script to be packaged.")
     build_parser.add_argument("--name", required=True, help="Name of the output executable.")
     build_parser.add_argument("--icon", help="Path to the icon file for the executable.")
+    
+    # <-- 変更点: --allow-download 引数を追加
+    build_parser.add_argument(
+        "--allow-download",
+        action="store_true",
+        help="Allow file downloads in the application.",
+    )
+    
     build_parser.add_argument(
         "--pyinstaller-options",
         nargs=argparse.REMAINDER,
